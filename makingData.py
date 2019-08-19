@@ -104,7 +104,7 @@ def convU2YearlyData(V,NUM_YEAR=0,sYear=0):
     """
     # zero matrix for year slip velocity, shape=[10000,8]
     yV = np.zeros([NUM_YEAR,NUM_CELL])
-    pdb.set_trace()
+    #pdb.set_trace()
     # 観測データがない年には観測データの１つ前のデータを入れる(累積)
     for year in np.arange(sYear, NUM_YEAR):
         # 観測データがある場合
@@ -130,8 +130,10 @@ def convU2YearlyData(V,NUM_YEAR=0,sYear=0):
 def GetyVInterval(yV,fCnt=0,isEval=False):
     """
     Get earthquakes interval by slip velocity V (year) 
-    [argument]
-    yV: slip velosity (year)
+    Eval, Test & Train diff. (number of cell) 
+    Args:
+        yV: slip velosity (year)
+        fCnt: for pickle file name (evaluatiton) 0 ~ 256
     """
     # more than 1 cm == slip
     SLIP = 1
@@ -158,10 +160,10 @@ def GetyVInterval(yV,fCnt=0,isEval=False):
         t_intervals = np.pad(t_intervals,[0,max_len-t_len],"constant")
         
         nankai_intervals = np.vstack([nk_intervals,tn_intervals,t_intervals])
-        
+        """
         # save intervals(explanatary) & param B & one-hot(target) vectors (one file)
         with open(os.path.join(gtpicklefullPath,"{}.pkl".format(fCnt)),"wb") as fp:
-            pickle.dump(nankai_intervals,fp)
+            pickle.dump(nankai_intervals,fp)"""
         
     else:
         # earthquakes year in nakai, shape=[earthquake-occur-year,]
@@ -316,6 +318,10 @@ def GenerateEval(files):
     Create Evaluation data.
     ground truth Nankai megaquakes U (all).
     """
+    
+    # nankai index
+    nkInd = 0
+    
     # gt_Vb pickle list 
     #files = glob.glob(os.path.join(featurePath,gtpicklePath,pName))
     
@@ -327,51 +333,85 @@ def GenerateEval(files):
     flag = False
     for fID in efiles:
         with open(fID,"rb") as fp:
+            # [cell,seq]
             gt = pickle.load(fp)
+            gt = gt.T
+            
+        # last time of non-zero intervals 
+        nk = np.where(gt[:,nkInd] > 0)[0].shape[0] # nankai
+        # get gt nankai length of intervals
+        nankaiIntervals = GetyVInterval(gt,fCnt=0,isEval=True)
+        
         if not flag:
-            # shape=[intervals(=8),cell(=3)]
-            xEval = gt.T[np.newaxis]
+            # int
+            xEvalSeq = nk
+            # shape=[number of intervals(=8),cell(=3)]
+            xEval = nankaiIntervals.T[np.newaxis]
             flag = True
         else:
-            xEval = np.vstack([xEval,gt.T[np.newaxis]])
+            xEvalSeq = np.hstack([xEvalSeq,nk])
+            xEval = np.vstack([xEval,nankaiIntervals.T[np.newaxis]])
     
-    # xEval.shape=[number of data,intervals,cell]
-    # xEval_REG.shape=[number of data(=256),intervals*cell]
-    xEval_REG = np.reshape(xEval,[xEval.shape[0],-1])
+    #xEval_REG = np.reshape(xEval,[xEval.shape[0],-1])
     
-    return xEval, xEval_REG
+    # xEval.shape=[number of data(=256),intervals(=8),cell(3)]
+    # xEval_REG.shape=[number of data(=256),intervals*cell(=24)]
+    # xEvalSeq.shaoe=[number of data(=256), maximum of sequence]
+    return xEval, xEvalSeq
 # --------------------------------------------------------------------------- #
-def GenerateTest(files):
+def GenerateTest(files,isWindows=False):
     """
     Create Test data.
-    [argument]
-    files: test pickle files path
+    Args:    
+        files: test pickle files path
     """
+    # test pickle list 
+    #files = glob.glob(os.path.join(featurePath,testpicklePath,pName))
     
     # sort nutural order
     tefiles = []
     for path in natsorted(files):
         tefiles.append(path)
-    # max interval 
-    max_interval =  int(tefiles[-1].split("\\")[-1].split("_")[0])
+    
+    if isWindows:
+        # max interval 
+        max_interval =  int(tefiles[-1].split("\\")[-1].split("_")[0])
+    else:
+        max_interval =  int(tefiles[-1].split("/")[-1].split("_")[0])
+        
     # get test data
     teX, teY, teY_label = ZeroPaddingX(tefiles,max_interval)
     
-    # NG?
-    teX_reg = teX[:,:LEN_SEQ,:]
+    # NG? wの大きさをそろえるために、evaluationの大きさにそろえるいくら長い系列長でもすべて8
+    #teX_reg = teX[:,:LEN_SEQ,:]
     # input feature vector for Regression, shape=[BATCH_SIZE,LEN_SEQ*NUM_CELL]
-    teX_reg = np.reshape(teX_reg,[teX.shape[0],-1])
+    #teX_reg = np.reshape(teX_reg,[teX.shape[0],-1])
     
-    return teX, teX_reg, teY, teY_label
+    # get length of intervals
+    flag = False
+    for file in tefiles:    
+        if not flag:
+            if isWindows:
+                testSeq = int(file.split("\\")[-1].split("_")[0])
+            else:
+                testSeq = int(file.split("/")[-1].split("_")[0])
+            flag = True
+        else:            
+            if isWindows:
+                testSeq = np.hstack([testSeq,int(file.split("\\")[-1].split("_")[0])])
+            else:
+                testSeq = np.hstack([testSeq,int(file.split("/")[-1].split("_")[0])])
+    
+    return teX, teY, teY_label, testSeq
 # --------------------------------------------------------------------------- #
-def nextBatch(BATCH_SIZE,files):
+def nextBatch(BATCH_SIZE,files,isWindows=False):
     """
     Extraction minibatch train data.
     [process]
     1. Sort near length of intervals
     """
     # train pickle files (comment out called by LSTM_Cls.py)
-    #tmpfiles = glob.glob(os.path.join(picklefullPath,pName))
+    files = glob.glob(os.path.join(picklefullPath,pName))
     
     # sort nutural order
     trfiles = []
@@ -385,19 +425,36 @@ def nextBatch(BATCH_SIZE,files):
     # batch files
     bfiles = trfiles[sInd:eInd]
     # length intervals of last batch files
-    max_interval =  int(bfiles[-1].split("\\")[-1].split("_")[0])
-    #max_interval =  int(bfiles[-1].split("/")[-1].split("_")[0])
+    if isWindows:
+        # max interval 
+        max_interval =  int(bfiles[-1].split("\\")[-1].split("_")[0])
+    else:
+        max_interval =  int(bfiles[-1].split("/")[-1].split("_")[0])
     
     # IN: batch files & length of max intervals, OUT: batchX, batchY
     batchX, batchY, batchY_label = ZeroPaddingX(bfiles,max_interval)
     
-    #pdb.set_trace()
     # NG
-    batchX_reg = batchX[:,:LEN_SEQ,:]
+    #batchX_reg = batchX[:,:LEN_SEQ,:]
     # input feature vector for Regression, shape=[BATCH_SIZE,LEN_SEQ*NUM_CELL]
-    batchX_reg = np.reshape(batchX_reg,[batchX.shape[0],-1])   
+    #batchX_reg = np.reshape(batchX_reg,[batchX.shape[0],-1])   
     
-    return batchX, batchX_reg, batchY, batchY_label
+    # get length of intervals
+    flag = False
+    for file in bfiles:
+        if not flag:
+            if isWindows:
+                batchSeq = int(file.split("\\")[-1].split("_")[0])
+            else:
+                batchSeq = int(file.split("/")[-1].split("_")[0])
+            flag = True
+        else:            
+            if isWindows:
+                batchSeq = np.hstack([batchSeq,int(file.split("\\")[-1].split("_")[0])])
+            else:
+                batchSeq = np.hstack([batchSeq,int(file.split("/")[-1].split("_")[0])])
+    
+    return batchX, batchY, batchY_label, batchSeq
 # --------------------------------------------------------------------------- #
 def ZeroPaddingX(files,max_interval):
     """
@@ -490,19 +547,11 @@ if __name__ == "__main__":
         intervals_len = GetyVInterval(yV)
         # Anotate B in all cell
         AnotationB(Bs,intervals_len,file)
-    
-    # --------- evaluation -------------------- #
-    with open(gtNankaiFullPath,"rb") as fp:
-        # slip velocity yV, shape=[256,1400,3]
-        gtyV = pickle.load(fp)
-    
-    flag = False
-    for fCnt in np.arange(gtyV.shape[0]):    
-        # ground truth length of intervals, gtyV.T.shape=[cell,year]
-        gt_intervals_len = GetyVInterval(gtyV[fCnt].T,isEval=True,fCnt=fCnt)
-    # ----------------------------------------- #
     """
+    # ----------------------------------------- #
+    
     # Split train & test data
     #GenerateEval()
-    SplitTrainTest()
-    #nextBatch(BATCH_SIZE=3)
+    #GenerateTest()
+    #SplitTrainTest(isWindows=isWindows)
+    nextBatch(BATCH_SIZE=3,isWindows=isWindows)

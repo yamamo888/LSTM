@@ -17,18 +17,18 @@ import matplotlib as mpl
 #mpl.use('Agg')
 import matplotlib.pylab as plt
 
-import MakeData as myData
+import makingData as myData
 import TrainingNN as NN
 
 
-# ----------- command argment ------------- #
+# --------------------------- command argment ------------------------------- #
 # number of class
 NUM_CLS = int(sys.argv[1])
 # number of layer
 depth = int(sys.argv[2])
-# ----------------------------------------- #
+# --------------------------------------------------------------------------- #
 
-# --------- parameters -------------------- #
+# ------------------------------- parameters -------------------------------- #
 # if you want Evaluation == True
 isEval = False
 
@@ -70,9 +70,9 @@ TKT_CENT = np.round(TKTMin + (beta/2), limitdecimal)
 BATCH_SIZE = 4
 # training rate
 lr = 1e-3
-# ----------------------------------------- #
+# --------------------------------------------------------------------------- #
 
-# --------------- path -------------------- #
+# ---------------------------------- path ----------------------------------- #
 features = "features"
 images = "images"
 results = "results"
@@ -98,19 +98,42 @@ trfiles = glob.glob(trainfullPath)
 tefiles = glob.glob(testfullPath)
 # all evaluation data full path
 efiles = glob.glob(evalfullPath)
-# ----------------------------------------- #
-# test
-xTest, xTest_REG, yTest, yTestLabel = myData.GenerateTest(tefiles)
+# --------------------------------------------------------------------------- #
+
+# ---------------------------- placeholder ---------------------------------- #
+# input placeholder for LSTM
+x = tf.placeholder(tf.float32, [None, None, NUM_CELL])
+# sequence length for LSTM
+sq = tf.placeholder(tf.int32, [None])
+# input placeholder for Regress test & train
+x_reg = tf.placeholder(tf.float32, [None, LEN_SEQ*NUM_CELL])
+# input placeholder for Regess evaluation
+x_reg_ev = tf.placeholder(tf.float32, [None, LEN_SEQ_EV*NUM_CELL])
+# output placeholder
+y = tf.placeholder(tf.float32, [None,NUM_CELL])
+# output placeholder class label
+y_label = tf.placeholder(tf.int32, [None,NUM_CLS,NUM_CELL])
+# --------------------------------------------------------------------------- #
+
+# ---------------------------- Get test data -------------------------------- #
+xTest, xTest_REG, yTest, yTestLabel, yTestSeq = myData.GenerateTest(tefiles)
+# --------------------------------------------------------------------------- #
+
+# ---------------------------- Get eval data -------------------------------- #
 # evaluation, xEval.shape=[number of data(=256),intervals(=8),cell(=3)]
-xEval, xEval_REG = myData.GenerateEval(efiles)
+xEval, xEval_REG, yEvalSeq = myData.GenerateEval(efiles)
 # xEval.shape=[256,8,"5"], nankai,tonankai,tokai -> nankai 2cell,tonankai 2cell,tokai
 xEval = np.concatenate((xEval[:,:,0][:,:,np.newaxis],xEval[:,:,0][:,:,np.newaxis],xEval[:,:,1][:,:,np.newaxis],xEval[:,:,1][:,:,np.newaxis],xEval[:,:,2][:,:,np.newaxis]),2)
 # xEval_REG.shape=[256,40(=4*5)]
 xEval_REG = np.reshape(xEval,[xEval.shape[0],-1])
 # --------------------------------------------------------------------------- #
-def LSTM(x,reuse=False):
+
+# --------------------------------------------------------------------------- #
+def LSTM(x,seq,reuse=False):
     """
     LSTM Model.
+    Args:
+        x:input vector (3D)
     """
     # hidden layer for "LSTM"
     cell = tf.contrib.rnn.LSTMCell(NUM_HIDDEN,forget_bias=1.0)
@@ -119,13 +142,13 @@ def LSTM(x,reuse=False):
         if reuse:
             scope.reuse_variables()
         
-        outputs, states = tf.nn.dynamic_rnn(cell=cell, inputs=x, dtype=tf.float32, time_major=False)
+        outputs, states = tf.nn.dynamic_rnn(cell=cell, inputs=x, dtype=tf.float32, sequence_length=seq, time_major=False)
         # shape=[BATCH_SIZE,LEN_SEQ,NUM_CELL] -> shape=[LEN_SEQ,BATCH_SIZE,NUM_CELL]
         outputs = tf.transpose(outputs, perm=[1, 0, 2])
         # last of hidden, shape=[BATCH_SIZE,NUM_HIDDEN]
-        output = outputs[-1]
-        
-        return output
+        state = states[-1]
+        pdb.set_trace()
+        return outputs, state
 # --------------------------------------------------------------------------- #
 def CreateRegInputOutput(x,y,cls_score,scent):
     
@@ -164,28 +187,14 @@ def CreateRegInput(x,cls_score,scent):
 
 # --------------------------------------------------------------------------- #
 # --------------------------------------------------------------------------- #
-if __name__ == "__main__":
-    
-    # --------- placeholder -------------------- #
-    # input placeholder for LSTM
-    x = tf.placeholder(tf.float32, [None, None, NUM_CELL])
-    # input placeholder for Regress test & train
-    x_reg = tf.placeholder(tf.float32, [None, LEN_SEQ*NUM_CELL])
-    # input placeholder for Regess evaluation
-    x_reg_ev = tf.placeholder(tf.float32, [None, LEN_SEQ_EV*NUM_CELL])
-    # output placeholder
-    y = tf.placeholder(tf.float32, [None,NUM_CELL])
-    # output placeholder class label
-    y_label = tf.placeholder(tf.int32, [None,NUM_CLS,NUM_CELL])
-    # ----------------------------------------- #
-    
+def main():
     # ========================== LSTM  ====================================== #
     # hidden.shape=[BATCH_SIZE,64] for train
-    hidden = LSTM(x)
+    outputs, hidden = LSTM(x,sq)
     # for test
-    hidden_te = LSTM(x,reuse=True)
-    hidden_ev = LSTM(x,reuse=True)
-    # ======================= Regression NN ================================= #
+    outputs_te, hidden_te = LSTM(x,sq,reuse=True)
+    outputs_ev, hidden_ev = LSTM(x,sq,reuse=True)
+    # ======================= Classification NN ============================= #
     # Classification NN for train
     pred_y1,pred_y2,pred_y3,pred_y4,pred_y5 = NN.Classify(hidden,NUM_CLS=NUM_CLS)
     # for test
@@ -213,7 +222,7 @@ if __name__ == "__main__":
     
     # optimizer
     trainer_cls = tf.train.AdamOptimizer(lr).minimize(loss_cls)
-    # =================Classification NN ==================================== #
+    # ======================================================================= #
     # OUT: pred_cls_cent: center variable of output LSTM, shape=
     # OUT: y_res: residual(=GT-predicted by LSTM), shape=
     # train
@@ -247,7 +256,7 @@ if __name__ == "__main__":
     # all residual test
     y_r_te = tf.concat((y_r1_te,y_r2_te,y_r3_te,y_r4_te,y_r5_te),1)
     
-    # ======================================================================= #
+    # ================== Regression NN ====================================== #
     # Regression networks for train
     pred_r = NN.Regress(hidden,depth=depth,name_scope="Regress")
     # for test
@@ -271,16 +280,28 @@ if __name__ == "__main__":
     for epoch in range(EPOCHES):
         for i in range(NUM_STEPS):
             
-            batchX, batchX_REG, batchY, batchYLabel = myData.nextBatch(BATCH_SIZE,trfiles)
+            batchX, batchX_REG, batchY, batchYLabel, batchSeq = myData.nextBatch(BATCH_SIZE,trfiles)
             
-            # =========================== train ============================= # 
+            # =========================== train ============================= #
+            # lstm
+            trainLSTMOut, trainLSTMHidden = sess.run([outputs, hidden], feed_dict={x:batchX, sq:batchSeq})
+            # classification
             _, trainClsLoss, trainClsCent = sess.run([trainer_cls, loss_cls, pred_cls_cent], feed_dict={x:batchX, y_label:batchYLabel})
+            # regression
             _, trainRegLoss, trainRes = sess.run([trainer_reg, loss_reg, pred_r], feed_dict={x:batchX, x_reg:batchX_REG, y:batchY})
         # ================== test =========================================== #
+        # lstm
+        testLSTMOut, testLSTMHidden = sess.run([outputs_te, hidden_te], feed_dict={x:xTest, sq:yTestSeq})
+        # classification
         testClsLoss, testClsCent = sess.run([loss_cls_te, pred_cls_cent_te], feed_dict={x:xTest, y_label:yTestLabel})
+        # regression
         testRegLoss, testRes = sess.run([loss_reg_te, pred_r_te], feed_dict={x:xTest, x_reg:xTest_REG, y:yTest})
         # ================== evaluation ===================================== # 
+        # lstm
+        evalSTMOut, evalLSTMHidden = sess.run([outputs_ev, hidden_ev], feed_dict={x:xEval, sq:yEvalSeq})
+        # classification
         evalClsCent = sess.run([pred_cls_cent_ev],feed_dict={x:xEval})
+        # regression
         evalRes = sess.run(pred_r_ev, feed_dict={x:xEval, x_reg_ev:xEval_REG})
         
         # predicted y
@@ -329,4 +350,5 @@ if __name__ == "__main__":
     
     plt.savefig(os.path.join(images,"Loss.png"))
     
-
+if __name__ == "__main__":
+    main()
