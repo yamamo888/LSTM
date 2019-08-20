@@ -62,7 +62,6 @@ def Classify(x,reuse=False,NUM_CLS=0,name_scope="Classify"):
             keepProb = 1.0
             scope.reuse_variables()
         
-        
         w1_cls = weight_variable("w1_cls",[NUM_HIDDEN1, NUM_HIDDEN2])
         bias1_cls = bias_variable("bias1_cls",[NUM_HIDDEN2])
         
