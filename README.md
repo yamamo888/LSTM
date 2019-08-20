@@ -2,8 +2,8 @@
 
 
 ### 1. データの作成 : `makingData.py` 
-**※1 dummy.txt が読み込まれてしまう恐れあり**
-**※2 Windowsユーザーは`if __name__ == "__main__":`を`isWindows=True`にしないと、ファイル読み込めません**
+**※1 dummy.txt が読み込まれてしまう恐れあり**　<br>
+**※2 Windowsユーザーは`if __name__ == "__main__":`を`isWindows=True`にしないと、ファイル読み込めません** <br>
 ある地震が発生した時の摩擦パラメータの組み合わせにより発生する地震間隔の個数は (例えば南海は3回の地震間隔、東南海は5回)、最長の地震間隔の個数に合わせる (例えば南海は**5**回の地震間隔、東南海は5回)。
 真値の南海トラフ巨大地震履歴の地震間隔の個数はすべて**8**に合わせる
 
@@ -172,7 +172,8 @@ def nextBatch(BATCH_SIZE,files,isWindows=False):
 
 ## コマンド
   - 引数: クラス数 `NUM_CLS` は Classify で使用 (10, 20)、 層数 `depth`　は Regress で使用 (3,4,5)
-  - 例： 10クラスと3層を用いる場合 ``` python LSTM.py 10 3 ```
+  - 例： 10クラスと3層を用いる場合 ``` python LSTM.py 11 3 ```
+  - **クラス数は、試したいクラス + 1　にする**
 
 ## LSTM 本体
 
@@ -224,4 +225,61 @@ def LSTM(x,seq,reuse=False):
 ```
 - 引数
   - x: 入力ベクトル [バッチ数、系列長、セル(5)]　※シミュレーションの方に合わせる
+  
+- `main()` で呼び出し
+
+``` python : LSTM.py
+    # hidden.shape=[BATCH_SIZE,64] for train
+    outputs, hidden = LSTM(x,sq)
+    # for test
+    outputs_te, hidden_te = LSTM(x,sq,reuse=True)
+    # for evaluation
+    outputs_ev, hidden_ev = LSTM(x,sq,reuse=True)
+```
+
+
+  <br>
+  
+ - Regression用の真値(残差)と~~入力~~を作成 ※入力は使わない
+  - `CreateRegInputOutput`は学習とテスト用
+  - `CreateRegInput`は評価用
+ 
+``` python : LSTM.py
+def CreateRegInputOutput(y,cls_score,scent):
+    ...
+    # Max class of predicted class
+    pred_maxcls = tf.expand_dims(tf.cast(tf.argmax(cls_score,axis=1),tf.float32),1)  
+    # Center variable of class        
+    pred_cls_center = pred_maxcls * beta + scent
+    # residual = objective - center variavle of class 
+    r = tf.expand_dims(y,1) - pred_cls_center
+    
+    return pred_cls_center, r
+```
+
+``` python : LSTM.py
+def CreateRegInput(cls_score,scent):
+    ...
+    # Max class of predicted class
+    pred_maxcls = tf.expand_dims(tf.cast(tf.argmax(cls_score,axis=1),tf.float32),1)  
+    # Center variable of class        
+    pred_cls_center = pred_maxcls * beta + scent
+    
+    return pred_cls_center
+ 
+``` 
+ 
+- Classification用の入力
+  -
+
+``` python : LSTM.py
+    # input for Classification
+    cls_in = hidden[-1] 
+    # for test
+    cls_in_te = hidden_te[-1]
+    # for evaluation
+    cls_in_ev = hidden_ev[-1]
+```
+ 
+ 
   
