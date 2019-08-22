@@ -1,7 +1,7 @@
 # LSTM
 
 
-### 1. データの作成 : `makingData.py` 
+## 1. データの作成 : `makingData.py` 
 **※1 dummy.txt が読み込まれてしまう恐れあり**　<br>
 **※2 Windowsユーザーは`if __name__ == "__main__":`を`isWindows=True`にしないと、ファイル読み込めません** <br>
 ある地震が発生した時の摩擦パラメータの組み合わせにより発生する地震間隔の個数は (例えば南海は3回の地震間隔、東南海は5回)、最長の地震間隔の個数に合わせる (例えば南海は**5**回の地震間隔、東南海は5回)。
@@ -167,15 +167,35 @@ def nextBatch(BATCH_SIZE,files,isWindows=False):
 ```
   
 
-    
-### 2. 特徴量の作成 (LSTM の実行) `LSTM.py`
+### データの受け渡し : `makingData.py`
 
-## コマンド
+- コード
+  - データを分けて作成したので、1つのディレクトリにまとめる必要がありました。(使わなくてもok)
+``` python
+ # move pickle files 
+    pickles = glob.glob(os.path.join(picklefullPath,pName))
+    # moved files path
+    newpicklepath = os.path.join(featurePath,"b2b3b4b5b6_Vb")
+    
+    for file in pickles:
+        # need full path ?
+        if isWindows:    
+            shutil.move(os.path.join(picklefullPath,file.split("\\")[2]), os.path.join(newpicklepath,file.split("\\")[2]))
+        else:
+            shutil.move(os.path.join(picklefullPath,file.split("/")[2]), os.path.join(newpicklepath,file.split("/")[2]))
+  ```
+
+
+
+    
+## 2. 特徴量の作成 (LSTM の実行) `LSTM.py`
+
+### コマンド
   - 引数: クラス数 `NUM_CLS` は Classify で使用 (10, 20)、 層数 `depth`　は Regress で使用 (3,4,5)
   - 例： 10クラスと3層を用いる場合 ``` python LSTM.py 11 3 ```
   - **クラス数は、試したいクラス + 1　にする**
 
-## LSTM 本体
+### LSTM 本体
 
 - placeholder
   - x : LSTM の入力 [バッチサイズ,系列長,セル]
@@ -280,6 +300,4 @@ def CreateRegInput(cls_score,scent):
     # for evaluation
     cls_in_ev = hidden_ev[-1]
 ```
- 
- 
-  
+
