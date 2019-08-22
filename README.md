@@ -165,7 +165,9 @@ def nextBatch(BATCH_SIZE,files,isWindows=False):
   
 ``` python: ZeroPaddingX
 ```
-  
+
+<br>
+
 
 ### データの受け渡し : `makingData.py`
 
@@ -185,7 +187,44 @@ def nextBatch(BATCH_SIZE,files,isWindows=False):
             shutil.move(os.path.join(picklefullPath,file.split("/")[2]), os.path.join(newpicklepath,file.split("/")[2]))
   ```
 
+<br>
 
+
+### 学習テストデータに分割
+- ひとつにまとめられた `b2b3b4b5b6_Vb`ディレクトリから、テストデータを格納する `test_Vb`に分割する
+
+
+``` python
+def SplitTrainTest():
+    """
+    Split train & test data (random).
+    Save test data in features/test/*.txt.pkl
+    """
+    # load x,y pickle files
+    files = glob.glob(os.path.join(picklefullPath,pName))
+    
+    # train rate
+    TRAIN_RATIO = 0.8
+    # number of all data
+    NUM_DATA = len(files)
+    # number of train data    
+    NUM_TRAIN = np.floor(NUM_DATA * TRAIN_RATIO).astype(int)
+    NUM_TEST = NUM_DATA - NUM_TRAIN
+    
+    # shuffle files list
+    random.shuffle(files)
+    
+    # train data
+    xTest = files[NUM_TRAIN:]
+    
+    # move test pickles to another directory
+    for fi in xTest:
+        #fName = fi.split("/")[2]
+        fName = fi.split("\\")[2]
+        shutil.move(fi,os.path.join(featurePath,testpicklePath,fName))
+```
+
+<br>
 
     
 ## 2. 特徴量の作成 (LSTM の実行) `LSTM.py`
