@@ -226,6 +226,52 @@ def SplitTrainTest():
 
 <br>
 
+### Zero padding : `makingData.py`
+
+- `if int(fi.split("\\")[-1].split("_")[0]) < max_interval:` : windowsユーザとlinuxユーザで手動切り替え 
+- `max_interval`分のzero 行列を用意して
+- `X`の分だけzero行列に数値を埋める、他は0
+
+<br>
+
+- コード
+``` python
+def ZeroPaddingX(files,max_interval):
+    ...
+   flag = False
+    for fi in files:
+        # load pickle files for mini-batch 
+        # X: intervals, Y: param B, Y_label: anotation of param B 
+        with open(fi,"rb") as fp:
+            X = pickle.load(fp)
+            Y = pickle.load(fp)
+            Y_label = pickle.load(fp)
+        
+        # zero matrix for zero padding, shape=[max_interval,cell(=5)]
+        zeros = np.zeros((max_interval,X.shape[1]))
+        
+        # 1. zero padding (fit to the longest batch file length
+        zeros[:X.shape[0],:] = X
+        
+        if not flag:
+            Xs = zeros[np.newaxis].astype(np.float32)
+            Ys = Y[np.newaxis].astype(np.float32)
+            Ys_label = Y_label[np.newaxis].astype(np.int32)
+            flag = True
+            
+        else:
+            Xs = np.concatenate([Xs,zeros[np.newaxis].astype(np.float32)],0)
+            Ys = np.concatenate([Ys,Y[np.newaxis].astype(np.float32)],0)
+            Ys_label = np.concatenate([Ys_label,Y_label[np.newaxis].astype(np.int32)],0)
+    
+    return Xs, Ys, Ys_label
+```
+
+
+<br>
+
+
+***
     
 ## 2. 特徴量の作成 (LSTM の実行) `LSTM.py`
 
@@ -237,9 +283,13 @@ def SplitTrainTest():
 ### LSTM 本体
 
 - placeholder
-  - x : LSTM の入力 [バッチサイズ,系列長,セル]
+  - x : LSTM の入力 [バッチサイズ,系列長,セル] ※tf.float32指定 (`tf.nn.dynamic`が動かなくなるので)
   - sq : LSTM のバッチのシーケンスの長さ [シーケンスの長さ] 
+  - y : 真値
+  - y_label : クラスラベル[バッチサイズ, クラス数, セル]  0 or 1 (計算グラフで分割)
   
+<br>
+
 ``` python: LSTM.py
 # input placeholder for LSTM
 x = tf.placeholder(tf.float32, [None, None, NUM_CELL])
