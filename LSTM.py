@@ -162,7 +162,7 @@ def LSTM(x,seq,reuse=False):
         cells.append(cell2)
         
         cell = tf.nn.rnn_cell.MultiRNNCell(cells)
-        
+        #pdb.set_trace()
         # states tuple (Ct [None,128], Ht [None,128]) * 3 Ct is long memory, Ht is short memory time_major?
         outputs, states = tf.nn.dynamic_rnn(cell=cell, inputs=x, dtype=tf.float32, sequence_length=seq)
         

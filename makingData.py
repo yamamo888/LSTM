@@ -16,7 +16,7 @@ import random
 from natsort import natsorted
 
 import pdb
-
+import time
 # ----------- path ------------------------ #
 # save log files path
 logsPath = "logs"
@@ -346,11 +346,11 @@ def GenerateEval(files):
             # int
             xEvalSeq = nk
             # shape=[number of intervals(=8),cell(=3)]
-            xEval = nankaiIntervals.T[np.newaxis]
+            xEval = nankaiIntervals.T[np.newaxis].astype(np.float32)
             flag = True
         else:
             xEvalSeq = np.hstack([xEvalSeq,nk])
-            xEval = np.vstack([xEval,nankaiIntervals.T[np.newaxis]])
+            xEval = np.concatenate([xEval,nankaiIntervals.T[np.newaxis].astype(np.float32)],0)
     
     #xEval_REG = np.reshape(xEval,[xEval.shape[0],-1])
     
@@ -466,7 +466,8 @@ def ZeroPaddingX(files,max_interval):
     files: mini-batch data list (fullPath)
     max_intervals: length of intervals for fitting
     """
-    flag1,flag2 = False,False
+    
+    flag = False
     for fi in files:
         # load pickle files for mini-batch 
         # X: intervals, Y: param B, Y_label: anotation of param B 
@@ -475,45 +476,22 @@ def ZeroPaddingX(files,max_interval):
             Y = pickle.load(fp)
             Y_label = pickle.load(fp)
         
-        # 1. less len(batchFile) than len(max length of intervals) 
-        if int(fi.split("\\")[-1].split("_")[0]) < max_interval:
-        #if int(fi.split("/")[-1].split("_")[0]) < max_interval:
-            #pdb.set_trace()
-            # zero matrix for zero padding, shape=[]
-            zeros = np.zeros((max_interval-X.shape[0],X.shape[1]))
-            # 2. zero padding (fit to the longest batch file length)
-            X = np.vstack([X,zeros])
+        # zero matrix for zero padding, shape=[max_interval,cell(=5)]
+        zeros = np.zeros((max_interval,X.shape[1]))
+        
+        # 1. zero padding (fit to the longest batch file length
+        zeros[:X.shape[0],:] = X
+        
+        if not flag:
+            Xs = zeros[np.newaxis].astype(np.float32)
+            Ys = Y[np.newaxis].astype(np.float32)
+            Ys_label = Y_label[np.newaxis].astype(np.int32)
+            flag = True
             
-            if not flag1:
-                sX = X[np.newaxis]
-                sY = Y
-                sY_label = Y_label[np.newaxis]
-                flag1 = True
-            else:
-                # Xs.shape=[batchSize,number of cell,intervals]
-                sX = np.vstack([sX,X[np.newaxis]])
-                # Ys.shape=[batchSize,number of cell]
-                sY = np.vstack([sY,Y])
-                # Ys.shape=[batchSize,number of cell,NUM_CLS]
-                sY_label = np.vstack([sY_label,Y_label[np.newaxis]])
         else:
-            # max_interval = X.shape[1]
-            if not flag2:
-                lX = X[np.newaxis]
-                lY = Y
-                lY_label = Y_label[np.newaxis]
-                flag2 = True
-            else:
-                lX = np.vstack([lX,X[np.newaxis]])
-                lY = np.vstack([lY,Y])
-                lY_label = np.vstack([lY_label,Y_label[np.newaxis]])
-    
-    # Xs.shape=[batchSize,intervals,number of cell] 
-    Xs = np.vstack([sX,lX])
-    # Ys.shape=[batchSize,number of cell]
-    Ys = np.vstack([sY,lY])
-    #Ys_label.shape=[batchSize,NUM_CLS,number of cell]
-    Ys_label = np.vstack([sY_label,lY_label])
+            Xs = np.concatenate([Xs,zeros[np.newaxis].astype(np.float32)],0)
+            Ys = np.concatenate([Ys,Y[np.newaxis].astype(np.float32)],0)
+            Ys_label = np.concatenate([Ys_label,Y_label[np.newaxis].astype(np.int32)],0)
     
     return Xs, Ys, Ys_label
 # --------------------------------------------------------------------------- #
@@ -549,7 +527,7 @@ if __name__ == "__main__":
         AnotationB(Bs,intervals_len,file)
     """
     # ----------------------------------------- #
-    
+    """
     # move pickle files 
     pickles = glob.glob(os.path.join(picklefullPath,pName))
     # moved files path
@@ -561,9 +539,12 @@ if __name__ == "__main__":
             shutil.move(os.path.join(picklefullPath,file.split("\\")[2]), os.path.join(newpicklepath,file.split("\\")[2]))
         else:
             shutil.move(os.path.join(picklefullPath,file.split("/")[2]), os.path.join(newpicklepath,file.split("/")[2]))
-            
+    # ----------------------------------------- #
+    """     
     # Split train & test data
     #GenerateEval()
     #GenerateTest()
     #SplitTrainTest(isWindows=isWindows)
+    
+    
     #nextBatch(BATCH_SIZE=3,isWindows=isWindows)
