@@ -24,7 +24,7 @@ dataPath = "b2b3b4b5b6_V"
 # save features for NN
 featurePath = "features"
 # save yV & paramB
-picklePath = "b2b3b4b5b6_Vb"
+picklePath = "b2b3b4b5b6_Vb_tmp"
 # save gt yV 
 gtpicklePath = "gt_Vb"
 # file relative path
@@ -550,8 +550,20 @@ if __name__ == "__main__":
     """
     # ----------------------------------------- #
     
+    # move pickle files 
+    pickles = glob.glob(os.path.join(picklefullPath,pName))
+    # moved files path
+    newpicklepath = os.path.join(featurePath,"b2b3b4b5b6_Vb")
+    
+    for file in pickles:
+        # need full path ?
+        if isWindows:    
+            shutil.move(os.path.join(picklefullPath,file.split("\\")[2]), os.path.join(newpicklepath,file.split("\\")[2]))
+        else:
+            shutil.move(os.path.join(picklefullPath,file.split("/")[2]), os.path.join(newpicklepath,file.split("/")[2]))
+            
     # Split train & test data
     #GenerateEval()
     #GenerateTest()
     #SplitTrainTest(isWindows=isWindows)
-    nextBatch(BATCH_SIZE=3,isWindows=isWindows)
+    #nextBatch(BATCH_SIZE=3,isWindows=isWindows)
