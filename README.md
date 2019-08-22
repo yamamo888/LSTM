@@ -224,6 +224,67 @@ def SplitTrainTest():
         shutil.move(fi,os.path.join(featurePath,testpicklePath,fName))
 ```
 
+### mini-batch　学習
+
+- 読み取りファイルのpathを指定 `files = glob.glob(os.path.join(picklefullPath,pName))`
+
+
+``` python
+def nextBatch(BATCH_SIZE,files,isWindows=False):
+    """
+    Extraction minibatch train data.
+    [process]
+    1. Sort near length of intervals
+    """
+    # train pickle files (comment out called by LSTM_Cls.py)
+    files = glob.glob(os.path.join(picklefullPath,pName))
+    
+    # sort nutural order
+    trfiles = []
+    for path in natsorted(files):
+        trfiles.append(path)
+    
+    # suffle start index & end index 
+    sInd = np.random.permutation(len(trfiles)-BATCH_SIZE)[0]
+    eInd = sInd + BATCH_SIZE
+    
+    # batch files
+    bfiles = trfiles[sInd:eInd]
+    # length intervals of last batch files
+    if isWindows:
+        # max interval 
+        max_interval =  int(bfiles[-1].split("\\")[-1].split("_")[0])
+    else:
+        max_interval =  int(bfiles[-1].split("/")[-1].split("_")[0])
+    
+    # IN: batch files & length of max intervals, OUT: batchX, batchY
+    batchX, batchY, batchY_label = ZeroPaddingX(bfiles,max_interval)
+    
+    # NG
+    #batchX_reg = batchX[:,:LEN_SEQ,:]
+    # input feature vector for Regression, shape=[BATCH_SIZE,LEN_SEQ*NUM_CELL]
+    #batchX_reg = np.reshape(batchX_reg,[batchX.shape[0],-1])   
+    
+    # get length of intervals
+    flag = False
+    for file in bfiles:
+        if not flag:
+            if isWindows:
+                batchSeq = int(file.split("\\")[-1].split("_")[0])
+            else:
+                batchSeq = int(file.split("/")[-1].split("_")[0])
+            flag = True
+        else:            
+            if isWindows:
+                batchSeq = np.hstack([batchSeq,int(file.split("\\")[-1].split("_")[0])])
+            else:
+                batchSeq = np.hstack([batchSeq,int(file.split("/")[-1].split("_")[0])])
+    
+    return batchX, batchY, batchY_label, batchSeq
+```
+
+
+
 <br>
 
 ### Zero padding : `makingData.py`
