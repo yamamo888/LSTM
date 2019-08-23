@@ -51,9 +51,9 @@ LEN_SEQ = 8
 # node of hidden for LSTM
 NUM_HIDDEN = 128
 # number of epocks
-EPOCHES = 500
+EPOCHES = 3
 # number of training
-NUM_STEPS = 200  
+NUM_STEPS = 2
 
 # minimum & maximum of paramter b in nankai 
 NKMin, NKMax = 0.0125, 0.017
@@ -366,19 +366,21 @@ def main():
         print("testPredB",testPred[:4])
         print("evalPredB",evalPred[:4])
         
-    # to save loss & predicted
-    if not flag:
-        trainClsLosses = trainClsLoss
-        trainRegLosses = trainRegLoss
-        testClsLosses = testClsLoss
-        testRegLosses = testRegLoss
-        flag = True
-    else:
-        trainClsLosses = np.hstack([trainClsLosses, trainClsLoss])
-        trainRegLosses = np.hstack([trainRegLosses, trainRegLoss])
-        testClsLosses = np.hstack([testClsLosses, testClsLoss])
-        testRegLosses = np.hstack([testRegLosses, testRegLoss])
-    
+        
+        # to save loss & predicted
+        if not flag:
+            trainClsLosses = trainClsLoss
+            trainRegLosses = trainRegLoss
+            testClsLosses = testClsLoss
+            testRegLosses = testRegLoss
+            flag = True
+        else:
+           
+            trainClsLosses = np.hstack([trainClsLosses, trainClsLoss])
+            trainRegLosses = np.hstack([trainRegLosses, trainRegLoss])
+            testClsLosses = np.hstack([testClsLosses, testClsLoss])
+            testRegLosses = np.hstack([testRegLosses, testRegLoss])
+        
     # save predicted paramB (test & eval)
     with open(os.path.join(results,"{}_{}_{}.pkl".format(epoch,NUM_CLS,depth)),"wb") as fp:
         pickle.dump(yTest,fp)
@@ -387,6 +389,7 @@ def main():
         pickle.dump(evalPred,fp)
 #------------------------------------------------------------------------------
     # Plot Loss
+    pdb.set_trace()
     plt.title("Loss")
     plt.plot(np.arange(trainClsLosses.shape[0]),trainClsLosses,color="coral",linewidth=5.0,label="TrainCls")
     plt.plot(np.arange(testClsLosses.shape[0]),testClsLosses,color="dodgerblue",linewidth=5.0,label="TestCls")
