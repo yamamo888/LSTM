@@ -366,25 +366,25 @@ def main():
         print("testPredB",testPred[:4])
         print("evalPredB",evalPred[:4])
         
-        # to save loss & predicted
-        if not flag:
-            trainClsLosses = trainClsLoss
-            trainRegLosses = trainRegLoss
-            testClsLosses = testClsLoss
-            testRegLosses = testRegLoss
-            flag = True
-        else:
-            trainClsLosses = np.hstack([trainClsLosses, trainClsLoss])
-            trainRegLosses = np.hstack([trainRegLosses, trainRegLoss])
-            testClsLosses = np.hstack([testClsLosses, testClsLoss])
-            testRegLosses = np.hstack([testRegLosses, testRegLoss])
-        
-        # save predicted paramB (test & eval)
-        with open(os.path.join(results,"{}_{}_{}.pkl".format(epoch,NUM_CLS,depth)),"wb") as fp:
-            pickle.dump(yTest,fp)
-            pickle.dump(trainPred,fp)
-            pickle.dump(testPred,fp)
-            pickle.dump(evalPred,fp)
+    # to save loss & predicted
+    if not flag:
+        trainClsLosses = trainClsLoss
+        trainRegLosses = trainRegLoss
+        testClsLosses = testClsLoss
+        testRegLosses = testRegLoss
+        flag = True
+    else:
+        trainClsLosses = np.hstack([trainClsLosses, trainClsLoss])
+        trainRegLosses = np.hstack([trainRegLosses, trainRegLoss])
+        testClsLosses = np.hstack([testClsLosses, testClsLoss])
+        testRegLosses = np.hstack([testRegLosses, testRegLoss])
+    
+    # save predicted paramB (test & eval)
+    with open(os.path.join(results,"{}_{}_{}.pkl".format(epoch,NUM_CLS,depth)),"wb") as fp:
+        pickle.dump(yTest,fp)
+        pickle.dump(trainPred,fp)
+        pickle.dump(testPred,fp)
+        pickle.dump(evalPred,fp)
 #------------------------------------------------------------------------------
     # Plot Loss
     plt.title("Loss")
