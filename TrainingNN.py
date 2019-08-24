@@ -19,6 +19,7 @@ import pdb
 NUM_HIDDEN1 = 128 # node of 1 hidden
 NUM_HIDDEN2 = 128 # node of 2 hidden
 NUM_HIDDEN3 = 128 # node of 3 hidden
+NUM_HIDDEN4 = 128 # node of 3 hidden
 
 # regression
 nRegHidden = 128 # node of 1 hidden
@@ -62,53 +63,56 @@ def Classify(x,reuse=False,NUM_CLS=0,name_scope="Classify"):
             keepProb = 1.0
             scope.reuse_variables()
         
+        # 1st
         w1_cls = weight_variable("w1_cls",[NUM_HIDDEN1, NUM_HIDDEN2])
         bias1_cls = bias_variable("bias1_cls",[NUM_HIDDEN2])
-        
         h1 = fc_relu(x,w1_cls,bias1_cls,keepProb)
         
+        # 2nd
         w2_cls = weight_variable("w2_cls",[NUM_HIDDEN2, NUM_HIDDEN3])
         bias2_cls = bias_variable("bias2_cls",[NUM_HIDDEN3])
-        
         h2 = fc_relu(h1,w2_cls,bias2_cls,keepProb)
         
-        # input -> hidden -> output in nankai
-        w3_1_cls = weight_variable("w3_1_cls",[NUM_HIDDEN3, NUM_CLS])
-        bias3_1_cls = bias_variable("bias3_1_cls",[NUM_CLS])
+        w3_cls = weight_variable("w3_cls",[NUM_HIDDEN3, NUM_HIDDEN4])
+        bias3_cls = bias_variable("bias3_cls",[NUM_HIDDEN4])
+        h3 = fc_relu(h2,w3_cls,bias3_cls,keepProb)
         
-        # input -> hidden -> output in nankai
-        w3_2_cls = weight_variable("w3_2_cls",[NUM_HIDDEN3, NUM_CLS])
-        bias3_2_cls = bias_variable("bias3_2_cls",[NUM_CLS])
+        # 3rd n1
+        w4_1_cls = weight_variable("w4_1_cls",[NUM_HIDDEN4, NUM_CLS])
+        bias4_1_cls = bias_variable("bias4_1_cls",[NUM_CLS])
         
-        # in tonankai
-        w3_3_cls = weight_variable("w3_3_cls",[NUM_HIDDEN3, NUM_CLS])
-        bias3_3_cls = bias_variable("bias3_3_cls",[NUM_CLS])
+        # 3rd n2
+        w4_2_cls = weight_variable("w4_2_cls",[NUM_HIDDEN4, NUM_CLS])
+        bias4_2_cls = bias_variable("bias4_2_cls",[NUM_CLS])
         
-        # in tonankai
-        w3_4_cls = weight_variable("w3_4_cls",[NUM_HIDDEN3, NUM_CLS])
-        bias3_4_cls = bias_variable("bias3_4_cls",[NUM_CLS])
+        # 3rd tonankai1
+        w4_3_cls = weight_variable("w4_3_cls",[NUM_HIDDEN4, NUM_CLS])
+        bias4_3_cls = bias_variable("bias4_3_cls",[NUM_CLS])
         
-        # tokai
-        w3_5_cls = weight_variable("w3_5_cls",[NUM_HIDDEN3, NUM_CLS])
-        bias3_5_cls = bias_variable("bias3_5_cls",[NUM_CLS])
+        # 3rd in tonankai2
+        w4_4_cls = weight_variable("w4_4_cls",[NUM_HIDDEN4, NUM_CLS])
+        bias4_4_cls = bias_variable("bias4_4_cls",[NUM_CLS])
+        
+        # 3rd tokai
+        w4_5_cls = weight_variable("w4_5_cls",[NUM_HIDDEN4, NUM_CLS])
+        bias4_5_cls = bias_variable("bias4_5_cls",[NUM_CLS])
     
         # shape=[BATCH_SIZE,NUM_CLS]
-        y1 = fc_sigmoid(h2,w3_1_cls,bias3_1_cls,keepProb)
-        y2 = fc_sigmoid(h2,w3_2_cls,bias3_2_cls,keepProb)
-        y3 = fc_sigmoid(h2,w3_3_cls,bias3_3_cls,keepProb)
-        y4 = fc_sigmoid(h2,w3_4_cls,bias3_4_cls,keepProb)
-        y5 = fc_sigmoid(h2,w3_5_cls,bias3_5_cls,keepProb)
+        y1 = fc_sigmoid(h3,w4_1_cls,bias4_1_cls,keepProb)
+        y2 = fc_sigmoid(h3,w4_2_cls,bias4_2_cls,keepProb)
+        y3 = fc_sigmoid(h3,w4_3_cls,bias4_3_cls,keepProb)
+        y4 = fc_sigmoid(h3,w4_4_cls,bias4_4_cls,keepProb)
+        y5 = fc_sigmoid(h3,w4_5_cls,bias4_5_cls,keepProb)
         
         return y1,y2,y3,y4,y5
 # --------------------------------------------------------------------------- #
-def Regress(x,reuse=False,depth=0,name_scope="Regress"):
+def Regress(x,reuse=False,name_scope="Regress"):
     
     """
     Fully-connected regression networks.
     [arguments]
     x: input data (feature vector or residual, shape=[None, LEN_SEQ*NUM_CELL])
     reuse=False: Train, reuse=True: Evaluation & Test (variables sharing)
-    depth=3: 3layer, depth=4: 4layer, depth=5: 5layer
     [activation]
     atr-nets: relu -> relu -> sigmoid
     ordinary regression & anchor-based: relu -> relu -> none
@@ -123,49 +127,24 @@ def Regress(x,reuse=False,depth=0,name_scope="Regress"):
         
         # テキトー
         nRegInput = x.get_shape().as_list()[1]
+        # 1st
         w1_reg = weight_variable('w1_reg',[nRegInput,nRegHidden])
         bias1_reg = bias_variable('bias1_reg',[nRegHidden])
-        
-        # input -> hidden1
         h1 = fc_relu(x,w1_reg,bias1_reg,keepProb)
         
-        if depth == 3:
-            
-            w2_reg = weight_variable('w2_reg',[nRegHidden,nRegOutput])
-            bias2_reg = bias_variable('bias2_reg',[nRegOutput])
-            
-            # hidden1 -> hidden2
-            # shape=[None,number of dimention (y)]
-            return fc(h1,w2_reg,bias2_reg,keepProb)
-       
-        elif depth == 4:
-            
-            w2_reg = weight_variable('w2_reg',[nRegHidden,nRegHidden2])
-            bias2_reg = bias_variable('bias2_reg',[nRegHidden2])
-            # hidden1 -> hidden2
-            h2 = fc_relu(h1,w2_reg,bias2_reg,keepProb)
-            
-            w3_reg = weight_variable('w3_reg',[nRegHidden2,nRegOutput])
-            bias3_reg = bias_variable('bias3_reg',[nRegOutput])
-            
-            # hidden2 -> hidden3
-            return fc(h2,w3_reg,bias3_reg,keepProb)
-       
-        elif depth == 5:
-            
-            w2_reg = weight_variable('w2_reg',[nRegHidden,nRegHidden2])
-            bias2_reg = bias_variable('bias2_reg',[nRegHidden2])
-            # hidden1 -> hidden2
-            h2 = fc_relu(h1,w2_reg,bias2_reg,keepProb)
-            
-            w3_reg = weight_variable('w3_reg',[nRegHidden2,nRegHidden3])
-            bias3_reg = bias_variable('bias3_reg',[nRegHidden3])
-            # hidden2 -> hidden3
-            h3 = fc_relu(h2,w3_reg,bias3_reg,keepProb)
+        # 2nd
+        w2_reg = weight_variable('w2_reg',[nRegHidden,nRegHidden2])
+        bias2_reg = bias_variable('bias2_reg',[nRegHidden2])
+        h2 = fc_relu(h1,w2_reg,bias2_reg,keepProb)
         
-            w4_reg = weight_variable('w4_reg',[nRegHidden3,nRegOutput])
-            bias4_reg = bias_variable('bias4_reg',[nRegOutput])
-            
-            # hidden3 -> hidden4
-            return fc(h3,w4_reg,bias4_reg,keepProb) 
+        # 3rd
+        w3_reg = weight_variable('w3_reg',[nRegHidden2,nRegHidden3])
+        bias3_reg = bias_variable('bias3_reg',[nRegHidden3])
+        h3 = fc_relu(h2,w3_reg,bias3_reg,keepProb)
+        
+        # 4th
+        w4_reg = weight_variable('w4_reg',[nRegHidden3,nRegOutput])
+        bias4_reg = bias_variable('bias4_reg',[nRegOutput])
+        
+        return fc(h3,w4_reg,bias4_reg,keepProb) 
 # --------------------------------------------------------------------------- #

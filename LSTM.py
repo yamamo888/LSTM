@@ -9,6 +9,7 @@ import sys
 import glob
 import pickle
 import pdb
+import random
 
 import numpy as np
 import tensorflow as tf
@@ -25,7 +26,7 @@ import TrainingNN as NN
 # number of class
 NUM_CLS = int(sys.argv[1])
 # number of layer
-depth = int(sys.argv[2])
+#depth = int(sys.argv[2])
 # --------------------------------------------------------------------------- #
 
 # ------------------------------- parameters -------------------------------- #
@@ -95,9 +96,17 @@ testfullPath = os.path.join(features,testpklPath,picklePath)
 evalfullPath = os.path.join(features,evalpklPath,picklePath)
 
 # all train data full path
-trfiles = glob.glob(trainfullPath)
+files = glob.glob(trainfullPath)
+trfiles = random.sample(files,len(files))[:1000]
+
 # all test data full path
-tefiles = glob.glob(testfullPath)
+files_ = glob.glob(testfullPath)
+tefiles = random.sample(files_,len(files_))
+testNum = int(len(tefiles)*0.5)
+tefiles = tefiles[:testNum]
+
+NUM_STEPS = int(len(trfiles)/BATCH_SIZE)
+
 # all evaluation data full path
 efiles = glob.glob(evalfullPath)
 # --------------------------------------------------------------------------- #
@@ -122,12 +131,14 @@ xTest, yTest, yTestLabel, yTestSeq = myData.GenerateTest(tefiles,isWindows=isWin
 # --------------------------------------------------------------------------- #
 
 # ---------------------------- Get eval data -------------------------------- #
+"""
 # evaluation, xEval.shape=[number of data(=256),intervals(=8),cell(=3)]
 xEval, yEvalSeq = myData.GenerateEval(efiles)
 # xEval.shape=[256,8,"5"], nankai,tonankai,tokai -> nankai 2cell,tonankai 2cell,tokai
 xEval = np.concatenate((xEval[:,:,0][:,:,np.newaxis],xEval[:,:,0][:,:,np.newaxis],xEval[:,:,1][:,:,np.newaxis],xEval[:,:,1][:,:,np.newaxis],xEval[:,:,2][:,:,np.newaxis]),2)
 # xEval_REG.shape=[256,40(=4*5)]
 xEval_REG = np.reshape(xEval,[xEval.shape[0],-1])
+"""
 # --------------------------------------------------------------------------- #
 
 # --------------------------------------------------------------------------- #
@@ -235,7 +246,7 @@ def main():
     # for test
     nn_in_te = hidden_te[-1]
     # for evaluation
-    nn_in_ev = hidden_ev[-1]
+    #nn_in_ev = hidden_ev[-1]
     
     #pdb.set_trace()
     # ======================= Classification NN ============================= #
@@ -244,7 +255,7 @@ def main():
     # for test
     pred_y1_te,pred_y2_te,pred_y3_te,pred_y4_te,pred_y5_te = NN.Classify(nn_in_te,NUM_CLS=NUM_CLS,reuse=True)
     # for evaluation
-    pred_y1_ev,pred_y2_ev,pred_y3_ev,pred_y4_ev,pred_y5_ev= NN.Classify(nn_in_ev,NUM_CLS=NUM_CLS,reuse=True)
+    #pred_y1_ev,pred_y2_ev,pred_y3_ev,pred_y4_ev,pred_y5_ev= NN.Classify(nn_in_ev,NUM_CLS=NUM_CLS,reuse=True)
     
     # Loss function (Cross Entropy) train
     loss_cls1 = tf.losses.softmax_cross_entropy(y_label[:,:,NK1ind], pred_y1)
@@ -264,8 +275,9 @@ def main():
     # all LSTM loss test
     loss_cls_te = loss_cls1_te + loss_cls2_te + loss_cls3_te + loss_cls4_te + loss_cls5_te
     
-    # optimizer
-    trainer_cls = tf.train.AdamOptimizer(lr).minimize(loss_cls)
+    Vars_ = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,scope="Classify")
+    trainer_cls = tf.train.AdamOptimizer(lr).minimize(loss_cls,var_list=Vars_)
+    
     # ======================================================================= #
     # OUT: pred_cls_cent: center variable of output LSTM, shape=
     # OUT: y_res: residual(=GT-predicted by LSTM), shape=
@@ -281,20 +293,21 @@ def main():
     pred_cls_cent3_te, y_r3_te = CreateRegInputOutput(y[:,TN1ind],pred_y3_te,TKT_CENT)
     pred_cls_cent4_te, y_r4_te = CreateRegInputOutput(y[:,TN2ind],pred_y4_te,TKT_CENT)
     pred_cls_cent5_te, y_r5_te = CreateRegInputOutput(y[:,Tind],pred_y5_te,TKT_CENT)
+    """
     # evaluation
     pred_cls_cent1_ev = CreateRegInput(pred_y1_ev,NK_CENT)
     pred_cls_cent2_ev = CreateRegInput(pred_y2_ev,NK_CENT)
     pred_cls_cent3_ev = CreateRegInput(pred_y3_ev,TKT_CENT)
     pred_cls_cent4_ev = CreateRegInput(pred_y4_ev,TKT_CENT)
     pred_cls_cent5_ev = CreateRegInput(pred_y5_ev,TKT_CENT)
-    
+    """
     
     # all center LSTM for train
     pred_cls_cent = tf.concat((pred_cls_cent1,pred_cls_cent2,pred_cls_cent3,pred_cls_cent4,pred_cls_cent5),1)
     # all center LSTM for test
     pred_cls_cent_te = tf.concat((pred_cls_cent1_te,pred_cls_cent2_te,pred_cls_cent3_te,pred_cls_cent4_te,pred_cls_cent5_te),1)
     # all center LSTM for evaluation
-    pred_cls_cent_ev = tf.concat((pred_cls_cent1_ev,pred_cls_cent2_ev,pred_cls_cent3_ev,pred_cls_cent4_ev,pred_cls_cent5_ev),1)
+    #pred_cls_cent_ev = tf.concat((pred_cls_cent1_ev,pred_cls_cent2_ev,pred_cls_cent3_ev,pred_cls_cent4_ev,pred_cls_cent5_ev),1)
     
     
     # all residual train
@@ -304,11 +317,11 @@ def main():
     
     # ================== Regression NN ====================================== #
     # Regression networks for train
-    pred_r = NN.Regress(nn_in,depth=depth,name_scope="Regress")
+    pred_r = NN.Regress(nn_in,name_scope="Regress")
     # for test
-    pred_r_te = NN.Regress(nn_in_te,reuse=True,depth=depth,name_scope="Regress")
+    pred_r_te = NN.Regress(nn_in_te,reuse=True,name_scope="Regress")
     # fot evaluation
-    pred_r_ev = NN.Regress(nn_in_ev,reuse=True,depth=depth,name_scope="Regress")
+    #pred_r_ev = NN.Regress(nn_in_ev,reuse=True,name_scope="Regress")
     
     # Loss function (MAE)
     loss_reg = tf.reduce_mean(tf.abs(y_r - pred_r))
@@ -318,7 +331,8 @@ def main():
     Vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,scope="Regress")
     trainer_reg = tf.train.AdamOptimizer(lr).minimize(loss_reg,var_list=Vars)
     # ======================================================================= #
-    sess = tf.Session()
+    config = tf.ConfigProto(gpu_options=tf.GPUOptions(per_process_gpu_memory_fraction=0.1,allow_growth=True)) 
+    sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())
     # ======================================================================= #
     flag = False
@@ -326,35 +340,28 @@ def main():
     for epoch in range(EPOCHES):
         for i in range(NUM_STEPS):
             
-            batchX, batchY, batchYLabel, batchSeq = myData.nextBatch(BATCH_SIZE,trfiles,isWindows=isWindows)
+            batchX, batchY, batchYLabel, batchSeq = myData.nextBatch(BATCH_SIZE,i,trfiles,isWindows=isWindows)
             
             # =========================== train ============================= #
-            # lstm
-            trainLSTMOut, trainLSTMHidden = sess.run([outputs, hidden], feed_dict={x:batchX, seq:batchSeq})
-            # classification
-            _, trainClsLoss, trainClsCent = sess.run([trainer_cls, loss_cls, pred_cls_cent], feed_dict={x:batchX, y_label:batchYLabel, seq:batchSeq})
-            #pdb.set_trace()
-            # regression
-            _, trainRegLoss, trainRes = sess.run([trainer_reg, loss_reg, pred_r], feed_dict={x:batchX, y:batchY, seq:batchSeq})
+            
+            _, _, trainLSTMOut, trainLSTMHidden, trainClsCent, trainRes, trainClsLoss, trainRegLoss = \
+            sess.run([trainer_cls, trainer_reg, outputs, hidden, pred_cls_cent, pred_r, loss_reg, loss_cls],feed_dict={x:batchX, y:batchY, y_label:batchYLabel, seq:batchSeq})
+		    
         # ================== test =========================================== #
-        # lstm
-        testLSTMOut, testLSTMHidden = sess.run([outputs_te, hidden_te], feed_dict={x:xTest, seq:yTestSeq})
-        # classification
-        testClsLoss, testClsCent = sess.run([loss_cls_te, pred_cls_cent_te], feed_dict={x:xTest, y_label:yTestLabel, seq:yTestSeq})
-        # regression
-        testRegLoss, testRes = sess.run([loss_reg_te, pred_r_te], feed_dict={x:xTest, y:yTest, seq:yTestSeq})
-        # ================== evaluation ===================================== # 
-        # lstm
-        evalSTMOut, evalLSTMHidden = sess.run([outputs_ev, hidden_ev], feed_dict={x:xEval, seq:yEvalSeq})
-        # classification
-        evalClsCent = sess.run([pred_cls_cent_ev],feed_dict={x:xEval, seq:yEvalSeq})
-        # regression
-        evalRes = sess.run(pred_r_ev, feed_dict={x:xEval, seq:yEvalSeq})
         
+            testLSTMOut, testLSTMHidden, testClsCent, testRes, testClsLoss, testRegLoss = \
+            sess.run([outputs_te, hidden_te, pred_cls_cent_te, pred_r_te, loss_reg_te, loss_cls_te], feed_dict={x:xTest, y:yTest, y_label:yTestLabel, seq:yTestSeq})
+		
+        # ================== evaluation ===================================== # 
+            """
+            evalSTMOut, evalLSTMHidden, evalClsCent, evalRes = \
+            sess.run([outputs_ev, hidden_ev, pred_cls_cent_ev, pred_r_ev], feed_dict={x:xEval, y:yTest, y_label:yTestLabel, seq:yEvalSeq})
+            """   
+        pdb.set_trace()
         # predicted y
         trainPred = trainClsCent + trainRes
         testPred = testClsCent + testRes
-        evalPred = evalClsCent + evalRes
+        #evalPred = evalClsCent + evalRes
         
         print("epoch %d, itr: %d" %  (epoch, i))
         print("trainClsLoss: %f, trainRegLoss: %f, testClsLoss: %f, testRegLoss: %f " % (trainClsLoss, trainRegLoss, testClsLoss, testRegLoss))
@@ -364,7 +371,7 @@ def main():
         print("==============================")
         print("truePredB",yTest[:4])
         print("testPredB",testPred[:4])
-        print("evalPredB",evalPred[:4])
+        #print("evalPredB",evalPred[:4])
         
         
         # to save loss & predicted
@@ -382,11 +389,11 @@ def main():
             testRegLosses = np.hstack([testRegLosses, testRegLoss])
         
     # save predicted paramB (test & eval)
-    with open(os.path.join(results,"{}_{}_{}.pkl".format(epoch,NUM_CLS,depth)),"wb") as fp:
+    with open(os.path.join(results,"{}_{}.pkl".format(epoch,NUM_CLS)),"wb") as fp:
         pickle.dump(yTest,fp)
         pickle.dump(trainPred,fp)
         pickle.dump(testPred,fp)
-        pickle.dump(evalPred,fp)
+        #pickle.dump(evalPred,fp)
 #------------------------------------------------------------------------------
     # Plot Loss
     pdb.set_trace()

@@ -404,14 +404,14 @@ def GenerateTest(files,isWindows=False):
     
     return teX, teY, teY_label, testSeq
 # --------------------------------------------------------------------------- #
-def nextBatch(BATCH_SIZE,files,isWindows=False):
+def nextBatch(BATCH_SIZE,BATCH_CNT,files,isWindows=False):
     """
     Extraction minibatch train data.
     [process]
     1. Sort near length of intervals
     """
     # train pickle files (comment out called by LSTM_Cls.py)
-    files = glob.glob(os.path.join(picklefullPath,pName))
+    #files = glob.glob(os.path.join(picklefullPath,pName))
     
     # sort nutural order
     trfiles = []
@@ -419,7 +419,7 @@ def nextBatch(BATCH_SIZE,files,isWindows=False):
         trfiles.append(path)
     
     # suffle start index & end index 
-    sInd = np.random.permutation(len(trfiles)-BATCH_SIZE)[0]
+    sInd = BATCH_CNT * BATCH_SIZE
     eInd = sInd + BATCH_SIZE
     
     # batch files
@@ -434,10 +434,6 @@ def nextBatch(BATCH_SIZE,files,isWindows=False):
     # IN: batch files & length of max intervals, OUT: batchX, batchY
     batchX, batchY, batchY_label = ZeroPaddingX(bfiles,max_interval)
     
-    # NG
-    #batchX_reg = batchX[:,:LEN_SEQ,:]
-    # input feature vector for Regression, shape=[BATCH_SIZE,LEN_SEQ*NUM_CELL]
-    #batchX_reg = np.reshape(batchX_reg,[batchX.shape[0],-1])   
     
     # get length of intervals
     flag = False
