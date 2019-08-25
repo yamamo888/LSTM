@@ -104,6 +104,27 @@ def GenerateTest(files):
     return teX, teY, teY_label, testSeq
 ```
   - 学習データ取得 : mini-batch
+  
+  - 【変更点】
+  ``` python
+    #tefiles = []
+    #for path in natsorted(files):
+        #tefiles.append(path)
+  ```
+  natsort使って、pathを地震発生間隔の長さ順にソートしていたが、時間がかかるため、変更 <br>
+  
+  ``` python
+  for path in files:
+        if len(os.path.basename(path).split("_")[0]) == 2:
+            os.rename(path, os.path.join(path.split("/")[0], 'b2b3b4b5b6_Vb' ,'{0:04d}'.format(0) + os.path.basename(path)))
+        else:
+            os.rename(path, os.path.join(path.split("/")[0], 'b2b3b4b5b6_Vb' ,'{0:03d}'.format(0) + os.path.basename(path)))
+    
+    tefiles = np.sort(files)
+  ```
+  通し番号を付けて、ex) 000 + 101, 0000 + 99 -> sort -> 000099, 000101 <br>
+  np.sort(...) でソートできるようにした 早い？
+
 
 ``` python : nextbatch
 def nextBatch(BATCH_SIZE,files,isWindows=False):
