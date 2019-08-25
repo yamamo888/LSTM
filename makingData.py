@@ -104,7 +104,7 @@ def convU2YearlyData(V,NUM_YEAR=0,sYear=0):
     """
     # zero matrix for year slip velocity, shape=[10000,8]
     yV = np.zeros([NUM_YEAR,NUM_CELL])
-    #pdb.set_trace()
+    
     # 観測データがない年には観測データの１つ前のデータを入れる(累積)
     for year in np.arange(sYear, NUM_YEAR):
         # 観測データがある場合
@@ -369,7 +369,7 @@ def GenerateTest(files,isWindows=False):
     #files = glob.glob(os.path.join(featurePath,testpicklePath,pName))
      
     tefiles = np.sort(files)
-    pdb.set_trace()
+    
     if isWindows:
         # max interval 
         max_interval =  int(tefiles[-1].split("\\")[-1].split("_")[0])
@@ -534,7 +534,7 @@ if __name__ == "__main__":
     # Split train & test data
     #GenerateEval()
     #GenerateTest()
-    SplitTrainTest(isWindows=isWindows)
+    #SplitTrainTest(isWindows=isWindows)
     
     
     #nextBatch(BATCH_SIZE=3,isWindows=isWindows)
