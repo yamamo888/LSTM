@@ -26,7 +26,6 @@ nRegHidden = 128 # node of 1 hidden
 nRegHidden2 = 128 # node of 2 hidden
 nRegHidden3 = 128 # node of 3 hidden
 nRegHidden4 = 128 # node of 4 hidden
-nRegOutput = 1
 # ----------------------------------------- #
 
 # ----------------------------------------------------------------------- #      
@@ -89,6 +88,7 @@ def Classify(x,reuse=False,NUM_CLS=0,name_scope="Classify"):
         w4_3_cls = weight_variable("w4_3_cls",[NUM_HIDDEN4, NUM_CLS])
         bias4_3_cls = bias_variable("bias4_3_cls",[NUM_CLS])
         
+        """
         # 3rd in tonankai2
         w4_4_cls = weight_variable("w4_4_cls",[NUM_HIDDEN4, NUM_CLS])
         bias4_4_cls = bias_variable("bias4_4_cls",[NUM_CLS])
@@ -96,17 +96,17 @@ def Classify(x,reuse=False,NUM_CLS=0,name_scope="Classify"):
         # 3rd tokai
         w4_5_cls = weight_variable("w4_5_cls",[NUM_HIDDEN4, NUM_CLS])
         bias4_5_cls = bias_variable("bias4_5_cls",[NUM_CLS])
-    
+        """ 
         # shape=[BATCH_SIZE,NUM_CLS]
         y1 = fc_sigmoid(h3,w4_1_cls,bias4_1_cls,keepProb)
         y2 = fc_sigmoid(h3,w4_2_cls,bias4_2_cls,keepProb)
         y3 = fc_sigmoid(h3,w4_3_cls,bias4_3_cls,keepProb)
-        y4 = fc_sigmoid(h3,w4_4_cls,bias4_4_cls,keepProb)
-        y5 = fc_sigmoid(h3,w4_5_cls,bias4_5_cls,keepProb)
+        #y4 = fc_sigmoid(h3,w4_4_cls,bias4_4_cls,keepProb)
+        #y5 = fc_sigmoid(h3,w4_5_cls,bias4_5_cls,keepProb)
         
-        return y1,y2,y3,y4,y5
+        return y1,y2,y3
 # --------------------------------------------------------------------------- #
-def Regress(x,reuse=False,name_scope="Regress"):
+def Regress(x,NUM_OUT,reuse=False,name_scope="Regress"):
     
     """
     Fully-connected regression networks.
@@ -143,8 +143,8 @@ def Regress(x,reuse=False,name_scope="Regress"):
         h3 = fc_relu(h2,w3_reg,bias3_reg,keepProb)
         
         # 4th
-        w4_reg = weight_variable('w4_reg',[nRegHidden3,nRegOutput])
-        bias4_reg = bias_variable('bias4_reg',[nRegOutput])
+        w4_reg = weight_variable('w4_reg',[nRegHidden3,NUM_OUT])
+        bias4_reg = bias_variable('bias4_reg',[NUM_OUT])
         
         return fc(h3,w4_reg,bias4_reg,keepProb) 
 # --------------------------------------------------------------------------- #

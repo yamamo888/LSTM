@@ -24,7 +24,7 @@ dataPath = "b2b3b4b5b6_V"
 # save features for NN
 featurePath = "features"
 # save yV & paramB
-picklePath = "b2b3b4b5b6_Vb_tmp"
+picklePath = "b2b3b4b5b6_Vb"
 # save gt yV 
 gtpicklePath = "gt_Vb"
 # file relative path
@@ -285,7 +285,7 @@ def AnotationB(paramB,intervals,fileName):
         pickle.dump(paramB,fp)
         pickle.dump(oneHot_vecs,fp)
 # --------------------------------------------------------------------------- #
-def SplitTrainTest():
+def SplitTrainTest(isWindows=False):
     """
     Split train & test data (random).
     Save test data in features/test/*.txt.pkl
@@ -309,8 +309,8 @@ def SplitTrainTest():
     
     # move test pickles to another directory
     for fi in xTest:
-        #fName = fi.split("/")[2]
-        fName = fi.split("\\")[2]
+        fName = fi.split("/")[2]
+        #fName = fi.split("\\")[2]
         shutil.move(fi,os.path.join(featurePath,testpicklePath,fName))
 # --------------------------------------------------------------------------- #
 def GenerateEval(files):
@@ -368,11 +368,32 @@ def GenerateTest(files,isWindows=False):
     # test pickle list 
     #files = glob.glob(os.path.join(featurePath,testpicklePath,pName))
     
-    # sort nutural order
-    tefiles = []
-    for path in natsorted(files):
-        tefiles.append(path)
     
+    #for path in files:
+        #os.rename(path, os.path.join(path.split("/")[0], 'test_Vb' ,'{0:01d}'.format(0) + os.path.basename(path)))
+    # sort nutural order
+    #tefiles = []
+    #for path in natsorted(files):
+        #tefiles.append(path)
+    #pdb.set_trace()
+    
+    for path in files:
+        if len(os.path.basename(path).split("_")[0]) == 5:
+            os.rename(path, os.path.join(path.split("/")[0], 'b2b3b4b5b6_Vb' ,'{0:01d}'.format(0) + os.path.basename(path)))
+        else:
+            pass
+         
+    
+    pdb.set_trace()
+    
+    for path in files:
+        if len(os.path.basename(path).split("_")[0]) == 2:
+            os.rename(path, os.path.join(path.split("/")[0], 'b2b3b4b5b6_Vb' ,'{0:04d}'.format(0) + os.path.basename(path)))
+        else:
+            os.rename(path, os.path.join(path.split("/")[0], 'b2b3b4b5b6_Vb' ,'{0:03d}'.format(0) + os.path.basename(path)))
+    
+    tefiles = np.sort(files)
+
     if isWindows:
         # max interval 
         max_interval =  int(tefiles[-1].split("\\")[-1].split("_")[0])
@@ -413,11 +434,22 @@ def nextBatch(BATCH_SIZE,BATCH_CNT,files,isWindows=False):
     # train pickle files (comment out called by LSTM_Cls.py)
     #files = glob.glob(os.path.join(picklefullPath,pName))
     
-    # sort nutural order
-    trfiles = []
-    for path in natsorted(files):
-        trfiles.append(path)
+    #for path in files:
+        #os.rename(path, os.path.join(path.split("/")[0], 'b2b3b4b5b6_Vb' ,'{0:01d}'.format(0) + os.path.basename(path)))
     
+    # sort nutural order
+    #trfiles = []
+    #for path in natsorted(files):
+        #trfiles.append(path)
+    
+    for path in files:
+        if len(os.path.basename(path).split("_")) == 3:
+            os.rename(path, os.path.join(path.split("/")[0], 'b2b3b4b5b6_Vb' ,'{0:03d}'.format(0) + os.path.basename(path)))
+        else:
+            os.rename(path, os.path.join(path.split("/")[0], 'b2b3b4b5b6_Vb' ,'{0:02d}'.format(0) + os.path.basename(path)))
+
+        
+    trfiles = np.sort(files)
     # suffle start index & end index 
     sInd = BATCH_CNT * BATCH_SIZE
     eInd = sInd + BATCH_SIZE
@@ -471,13 +503,14 @@ def ZeroPaddingX(files,max_interval):
             X = pickle.load(fp)
             Y = pickle.load(fp)
             Y_label = pickle.load(fp)
-        
+        #pdb.set_trace()
+        Y = np.hstack([Y[0],Y[2],Y[4]])
+        Y_label = np.vstack([Y_label[:,0],Y_label[:,2],Y_label[:,4]])
         # zero matrix for zero padding, shape=[max_interval,cell(=5)]
         zeros = np.zeros((max_interval,X.shape[1]))
         
         # 1. zero padding (fit to the longest batch file length
         zeros[:X.shape[0],:] = X
-        
         if not flag:
             Xs = zeros[np.newaxis].astype(np.float32)
             Ys = Y[np.newaxis].astype(np.float32)
@@ -495,7 +528,7 @@ def ZeroPaddingX(files,max_interval):
 if __name__ == "__main__":
     
     # if you use Windows -> True
-    isWindows = True
+    isWindows = False
     
     # ----------- path ------------------------ #
     # logs (by simulation) files path
@@ -540,7 +573,7 @@ if __name__ == "__main__":
     # Split train & test data
     #GenerateEval()
     #GenerateTest()
-    #SplitTrainTest(isWindows=isWindows)
+    SplitTrainTest(isWindows=isWindows)
     
     
     #nextBatch(BATCH_SIZE=3,isWindows=isWindows)
