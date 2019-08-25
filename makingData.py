@@ -367,33 +367,9 @@ def GenerateTest(files,isWindows=False):
     """
     # test pickle list 
     #files = glob.glob(os.path.join(featurePath,testpicklePath,pName))
-    
-    
-    #for path in files:
-        #os.rename(path, os.path.join(path.split("/")[0], 'test_Vb' ,'{0:01d}'.format(0) + os.path.basename(path)))
-    # sort nutural order
-    #tefiles = []
-    #for path in natsorted(files):
-        #tefiles.append(path)
-    #pdb.set_trace()
-    
-    for path in files:
-        if len(os.path.basename(path).split("_")[0]) == 5:
-            os.rename(path, os.path.join(path.split("/")[0], 'b2b3b4b5b6_Vb' ,'{0:01d}'.format(0) + os.path.basename(path)))
-        else:
-            pass
-         
-    
-    pdb.set_trace()
-    
-    for path in files:
-        if len(os.path.basename(path).split("_")[0]) == 2:
-            os.rename(path, os.path.join(path.split("/")[0], 'b2b3b4b5b6_Vb' ,'{0:04d}'.format(0) + os.path.basename(path)))
-        else:
-            os.rename(path, os.path.join(path.split("/")[0], 'b2b3b4b5b6_Vb' ,'{0:03d}'.format(0) + os.path.basename(path)))
-    
+     
     tefiles = np.sort(files)
-
+    pdb.set_trace()
     if isWindows:
         # max interval 
         max_interval =  int(tefiles[-1].split("\\")[-1].split("_")[0])
@@ -433,22 +409,7 @@ def nextBatch(BATCH_SIZE,BATCH_CNT,files,isWindows=False):
     """
     # train pickle files (comment out called by LSTM_Cls.py)
     #files = glob.glob(os.path.join(picklefullPath,pName))
-    
-    #for path in files:
-        #os.rename(path, os.path.join(path.split("/")[0], 'b2b3b4b5b6_Vb' ,'{0:01d}'.format(0) + os.path.basename(path)))
-    
-    # sort nutural order
-    #trfiles = []
-    #for path in natsorted(files):
-        #trfiles.append(path)
-    
-    for path in files:
-        if len(os.path.basename(path).split("_")) == 3:
-            os.rename(path, os.path.join(path.split("/")[0], 'b2b3b4b5b6_Vb' ,'{0:03d}'.format(0) + os.path.basename(path)))
-        else:
-            os.rename(path, os.path.join(path.split("/")[0], 'b2b3b4b5b6_Vb' ,'{0:02d}'.format(0) + os.path.basename(path)))
 
-        
     trfiles = np.sort(files)
     # suffle start index & end index 
     sInd = BATCH_CNT * BATCH_SIZE
