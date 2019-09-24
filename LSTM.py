@@ -153,10 +153,13 @@ def LSTM(x,seq,reuse=False):
         cells = []
         # 1st LSTM
         cell1 = tf.contrib.rnn.LSTMCell(NUM_HIDDEN,use_peepholes=True)
+        #cell1 = tf.contrib.rnn.LSTMCell(NUM_HIDDEN)
         # Dropout
         #cell2 = tf.nn.rnn_cell.DropoutWrapper(cell=cell1,input_keep_prob=inkeepProb,output_keep_prob=outkeepProb)
         # 2nd LSTM
         cell2 = tf.contrib.rnn.LSTMCell(NUM_HIDDEN,use_peepholes=True)
+        
+        #cell2 = tf.contrib.rnn.LSTMCell(NUM_HIDDEN)
         
         cells.append(cell1)
         cells.append(cell2)
@@ -167,9 +170,6 @@ def LSTM(x,seq,reuse=False):
         
         outputs, states = tf.nn.dynamic_rnn(cell=cell, inputs=x, dtype=tf.float32, sequence_length=seq)
         
-        # shape=[BATCH_SIZE,LEN_SEQ,NUM_CELL] -> shape=[LEN_SEQ,BATCH_SIZE,NUM_CELL]
-        #outputs = tf.transpose(outputs, perm=[1, 0, 2])
-        # last of hidden, shape=[BATCH_SIZE,NUM_HIDDEN]
         
         # outputs [None,None,HIDDEN] 
         # states[-1] tuple (Ct [None,128], Ht [None,128])
@@ -241,11 +241,11 @@ def main():
     
     # ======================= Classification NN ============================= #
     # Classification NN for train
-    pred_y1,pred_y2,pred_y3 = NN.Classify(nn_in,NUM_CLS=NUM_CLS)
+    pred_y1,pred_y2,pred_y3,h3 = NN.Classify(nn_in,NUM_CLS=NUM_CLS)
     # for test
-    pred_y1_te,pred_y2_te,pred_y3_te = NN.Classify(nn_in_te,NUM_CLS=NUM_CLS,reuse=True)
+    pred_y1_te,pred_y2_te,pred_y3_te,h3_te = NN.Classify(nn_in_te,NUM_CLS=NUM_CLS,reuse=True)
     # for evaluation
-    pred_y1_ev,pred_y2_ev,pred_y3_ev = NN.Classify(nn_in_ev,NUM_CLS=NUM_CLS,reuse=True)
+    pred_y1_ev,pred_y2_ev,pred_y3_ev,h3_ev = NN.Classify(nn_in_ev,NUM_CLS=NUM_CLS,reuse=True)
     
     # Loss function (Cross Entropy) train
     loss_cls1 = tf.losses.softmax_cross_entropy(y_label[:,:,NK1ind], pred_y1)
@@ -389,7 +389,7 @@ def main():
             testRegLosses = np.hstack([testRegLosses, testRegLoss])
     
     # save predicted paramB (test & eval)
-    with open(os.path.join(results,"{}_{}_2.pkl".format(epoch,NUM_CLS)),"wb") as fp:
+    with open(os.path.join(results,"{}_{}_5.pkl".format(epoch,NUM_CLS)),"wb") as fp:
         pickle.dump(yTest,fp)
         pickle.dump(trainPred,fp)
         pickle.dump(testPred,fp)
@@ -404,7 +404,7 @@ def main():
     plt.xlabel("epochs")
     plt.legend()
     
-    plt.savefig(os.path.join(images,"Loss_{}_2.png".format(NUM_CLS)))
+    plt.savefig(os.path.join(images,"Loss_{}_5.png".format(NUM_CLS)))
      
 if __name__ == "__main__":
     main()

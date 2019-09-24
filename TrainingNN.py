@@ -104,7 +104,7 @@ def Classify(x,reuse=False,NUM_CLS=0,name_scope="Classify"):
         #y4 = fc_sigmoid(h3,w4_4_cls,bias4_4_cls,keepProb)
         #y5 = fc_sigmoid(h3,w4_5_cls,bias4_5_cls,keepProb)
         
-        return y1,y2,y3
+        return y1,y2,y3,h3
 # --------------------------------------------------------------------------- #
 def Regress(x,NUM_OUT,reuse=False,name_scope="Regress"):
     
